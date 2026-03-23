@@ -12,10 +12,10 @@ class Car:
         self.angle = 0  # degrees — 0 means car facing up
 
         # tuning
-        self.acceleration_force = 300
-        self.brake_force = 500
-        self.max_speed = 600
-        self.turn_speed = 650
+        self.acceleration_force = 200
+        self.brake_force = 250
+        self.max_speed = 400
+        self.turn_speed = 325
         self.side_friction = 0.8
 
     def get_forward_vector(self):

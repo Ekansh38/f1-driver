@@ -2,7 +2,7 @@ import pygame
 import json
 
 pygame.init()
-pygame.display.set_mode((1, 1))  # dummy window so convert() works
+pygame.display.set_mode((1, 1))  # dummy window
 
 surface = pygame.image.load("assets/waypoint_layer.png").convert()
 
@@ -13,7 +13,7 @@ for y in range(surface.get_height()):
             waypoints.append([x, y])
 
 with open("track.json", "w") as f:
-    json.dump({"waypoints": waypoints, "track_width": 8}, f, indent=2)
+    json.dump({"waypoints": waypoints, "track_width": 15}, f, indent=2)
 
 print(f"Extracted {len(waypoints)} waypoints -> track.json")
 pygame.quit()
