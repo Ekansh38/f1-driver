@@ -2,7 +2,7 @@ import pygame
 import numpy as np
 
 
-def find_start_line(image_path, target_rgb=(215, 123, 186), tolerance=25):
+def find_start_line(image_path, target_rgb=(255, 0, 0), tolerance=10):
     surface = pygame.image.load(image_path).convert()
     arr = pygame.surfarray.array3d(surface)  # shape: (width, height, 3)
     r, g, b = target_rgb

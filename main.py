@@ -6,11 +6,16 @@ import json
 import math
 from racing_env.start_line import find_start_line
 from racing_env.lap_timer import LapTimer
+from hud import HUD
+
+# simple init stuf
 
 pygame.init()
 screen = pygame.display.set_mode((config.WIDTH, config.HEIGHT))
 pygame.display.set_caption("rl-driver")
 clock = pygame.time.Clock()
+
+# load waypoints
 
 track_img = pygame.image.load("assets/waypoint_layer.png").convert()
 track_img = pygame.transform.scale(track_img, (config.WIDTH, config.HEIGHT))
@@ -35,8 +40,10 @@ def is_on_track(pos):
     )
 
 
+# startline setup and also lap timer
+
 def get_forward_normal(line_center, waypoints):
-    """Return the forward travel direction at the start line using nearby waypoints."""
+    # returns forward direction vector
     dists = [(line_center.distance_to(wp), i) for i, wp in enumerate(waypoints)]
     dists.sort()
     idx = dists[0][1]
@@ -50,16 +57,15 @@ def get_forward_normal(line_center, waypoints):
 
 track_img = pygame.image.load("assets/bg.png").convert()
 
-# Set up start line and lap timer
-start_center = find_start_line("assets/bg.png")
+raw = find_start_line("assets/waypoint_layer.png")
+start_center = pygame.Vector2(raw.x * scale_x, raw.y * scale_y) if raw else None
 if start_center:
     forward_normal = get_forward_normal(start_center, waypoints)
     lap_timer = LapTimer(start_center, forward_normal, proximity_threshold=track_width_scaled)
-    print(f"Start line at {start_center}, forward normal={forward_normal}")
 else:
     lap_timer = None
 
-font = pygame.font.Font(None, 36)
+hud = HUD()
 
 car = car.Car(1100, 600)
 
@@ -72,6 +78,11 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_TAB:
+                hud.toggle()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            hud.handle_click(event.pos)
     screen.fill(config.BLACK)
 
     keys = get_human_action(pygame.key.get_pressed())
@@ -94,7 +105,7 @@ while running:
 
     if lap_timer:
         lap_timer.update(car.position, car.velocity, dt)
-        lap_timer.draw(screen, font, pos=((config.WIDTH//2)+00, config.HEIGHT // 2))
+        hud.draw(screen, car, lap_timer)
 
     # push buffer to screen
     pygame.display.flip()       
