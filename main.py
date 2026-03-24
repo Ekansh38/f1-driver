@@ -35,7 +35,7 @@ waypoints = [pygame.Vector2(wp.x * scale_x, wp.y * scale_y) for wp in waypoints]
 track_width_scaled = track_width * scale_x
 
 def is_on_track(pos):
-    extra = 20 #20 for perfect
+    extra = 0 #20 for perfect
     return any(
         max(abs(pos.x - wp.x), abs(pos.y - wp.y)) + extra < track_width_scaled
         for wp in waypoints
