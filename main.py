@@ -10,7 +10,7 @@ from hud import HUD
 
 # simple init stuf
 
-visual_mode = False
+visual_mode = True
 
 pygame.init()
 screen = pygame.display.set_mode((config.WIDTH, config.HEIGHT))
