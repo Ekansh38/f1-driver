@@ -126,6 +126,9 @@ while running:
         if lap_timer:
             lap_timer.update(car.position, car.velocity, dt)
             hud.draw(screen, car, lap_timer)
+    else:
+        if lap_timer:
+            lap_timer.update(car.position, car.velocity, dt)
 
     # push buffer to screen
     pygame.display.flip()       
