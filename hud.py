@@ -190,7 +190,7 @@ class HUD:
         bar_x = x + self.PADDING
         bar_y = ty + self.LINE_HEIGHT - 4
         bar_max_w = panel_w - self.PADDING * 2
-        bar_fill = int(bar_max_w * min(speed_kmh / 300, 1.0))
+        bar_fill = int(bar_max_w * min(speed_kmh / 400, 1.0))
         speed_pct = min(speed_kmh / 300, 1.0)
         bar_color = (int(255 * speed_pct), int(255 * (1 - speed_pct)), 50)
         pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y, bar_max_w, 5))
