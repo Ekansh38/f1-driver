@@ -257,9 +257,14 @@ class HUD:
         best = min(laps) if laps else None
 
         header_h = self.LINE_HEIGHT + self.PADDING
-        num_laps = max(len(laps), 1)
-        panel_w = 260
-        panel_h = header_h + num_laps * self.LINE_HEIGHT + self.PADDING
+        col_w = 260
+        max_rows = max(1, (sh - 12 - header_h - self.PADDING) // self.LINE_HEIGHT)
+        num_cols = max(1, -(-len(laps) // max_rows))  # ceiling division
+        rows_in_last_col = len(laps) % max_rows or max_rows
+        rows_this_panel = min(len(laps), max_rows) if laps else 1
+
+        panel_w = col_w * num_cols
+        panel_h = header_h + rows_this_panel * self.LINE_HEIGHT + self.PADDING
         x = 12
         y = 12
 
@@ -279,24 +284,27 @@ class HUD:
             return
 
         for i, t in enumerate(laps):
-            row_y = y + header_h + i * self.LINE_HEIGHT
+            col = i // max_rows
+            row = i % max_rows
+            col_x = x + col * col_w
+            row_y = y + header_h + row * self.LINE_HEIGHT
             is_best = t == best
             screen.blit(
                 self.font_label.render(f"L{i + 1}", True, (120, 120, 120)),
-                (x + self.PADDING, row_y + 6),
+                (col_x + self.PADDING, row_y + 6),
             )
             screen.blit(
                 self.font.render(
                     _fmt_time(t), True, (255, 215, 0) if is_best else (255, 255, 255)
                 ),
-                (x + 46, row_y),
+                (col_x + 46, row_y),
             )
             delta_str = "BEST" if is_best else f"+{t - best:.2f}s"
             screen.blit(
                 self.font_label.render(
                     delta_str, True, (255, 215, 0) if is_best else (200, 100, 100)
                 ),
-                (x + 160, row_y + 6),
+                (col_x + 160, row_y + 6),
             )
 
     def _draw_car_params(self, screen, car):

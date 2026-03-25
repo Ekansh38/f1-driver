@@ -75,7 +75,8 @@ hud = HUD()
 telemetry = LapTelemetry()
 prev_lap_count = 0
 
-car = car.Car(1100, 600)
+car_spawn = pygame.Vector2(1100, 600)
+car = car.Car(car_spawn.x, car_spawn.y)
 
 running = True
 paused = False
@@ -100,7 +101,18 @@ while running:
                 elif lap_timer:
                     lap_timer.unpause()
                 paused = not paused
+            if event.key == pygame.K_r:
+                # RESET
+                car.position = pygame.Vector2(car_spawn)
+                car.velocity = pygame.Vector2(0, 0)
+                car.angle = 0
+                if lap_timer:
+                    lap_timer.reset()
+                paused = False
+                telemetry._current = []
+
             elif event.key == pygame.K_g:
+                # PAUSE ON GRAPH
                 if not hud.graph_open:
                     if not paused and lap_timer:
                         lap_timer.pause()
@@ -110,7 +122,9 @@ while running:
                         lap_timer.unpause()
                     paused = False
 
+            # UPDATE HUD
             hud.handle_keydown(event.key)
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             hud.handle_mousedown(event.pos, car)
         if event.type == pygame.MOUSEMOTION:
