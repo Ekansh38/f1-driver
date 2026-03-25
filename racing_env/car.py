@@ -3,13 +3,13 @@ import math
 import config
 
 class Car:
-    def __init__(self, x, y):
+    def __init__(self, x, y, angle):
         self.surface = pygame.image.load(config.CAR_IMAGE_PATH).convert_alpha()
         self.surface = pygame.transform.scale(self.surface, (40, 40))
 
         self.position = pygame.Vector2(x, y)
         self.velocity = pygame.Vector2(0, 0)
-        self.angle = 0  # degrees — 0 means car facing up
+        self.angle = angle  # degrees — 0 means car facing up
 
         # tuning
         self.acceleration_force = 200

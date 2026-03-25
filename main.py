@@ -76,7 +76,8 @@ telemetry = LapTelemetry()
 prev_lap_count = 0
 
 car_spawn = pygame.Vector2(1100, 600)
-car = car.Car(car_spawn.x, car_spawn.y)
+start_angle = 90
+car = car.Car(car_spawn.x, car_spawn.y, start_angle)
 
 running = True
 paused = False
@@ -105,7 +106,7 @@ while running:
                 # RESET
                 car.position = pygame.Vector2(car_spawn)
                 car.velocity = pygame.Vector2(0, 0)
-                car.angle = 0
+                car.angle = start_angle
                 if lap_timer:
                     lap_timer.reset()
                 paused = False
