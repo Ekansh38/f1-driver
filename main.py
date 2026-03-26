@@ -74,7 +74,7 @@ def get_forward_normal(line_center, waypoints):
 track_img = pygame.image.load("assets/bg.png").convert()
 track_img = pygame.transform.scale(track_img, (config.WIDTH * _rs, config.HEIGHT * _rs))
 
-raw = find_start_line("assets/waypoint_layer.png")
+raw = find_start_line("assets/track_data.png")
 start_center = pygame.Vector2(raw.x * scale_x, raw.y * scale_y) if raw else None
 if start_center:
     forward_normal = get_forward_normal(start_center, waypoints)
