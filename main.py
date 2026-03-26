@@ -21,23 +21,25 @@ _rs = config.RENDER_SCALE
 game_surface = pygame.Surface((config.WIDTH * _rs, config.HEIGHT * _rs))
 clock = pygame.time.Clock()
 
-# load waypoints
+# load track data
 
 with open("track.json") as f:
     track_data = json.load(f)
 
-waypoints = [pygame.Vector2(p) for p in track_data["waypoints"]]
-track_width = track_data["track_width"]
-
-# scale waypoints from 160x90 to 1280x720
-scale_x = config.WIDTH / 160
-scale_y = config.HEIGHT / 90
-waypoints = [pygame.Vector2(wp.x * scale_x, wp.y * scale_y) for wp in waypoints]
-track_width_scaled = track_width * scale_x
+internal_res = track_data["internal_res"]
+world_w = track_data["world_w"]
+world_h = track_data["world_h"]
+_hex = track_data["background_color"].lstrip("#")
+bg_color = tuple(int(_hex[i : i + 2], 16) for i in (0, 2, 4))
+scale_x = world_w / track_data["painted_w"]
+scale_y = world_h / track_data["painted_h"]
+waypoints = [
+    pygame.Vector2(p[0] * scale_x, p[1] * scale_y) for p in track_data["waypoints"]
+]
 
 
 mask = pygame.image.load("assets/track_mask.png").convert()
-mask = pygame.transform.scale(mask, (config.WIDTH, config.HEIGHT))
+mask = pygame.transform.scale(mask, (world_w, world_h))
 
 
 mask_arr = pygame.surfarray.array3d(mask)
@@ -50,7 +52,7 @@ signed_dist = dist_in - dist_out  # positive inside negative outside
 
 def is_on_track(pos, margin=0):
     x, y = int(pos.x), int(pos.y)
-    if not (0 <= x < config.WIDTH and 0 <= y < config.HEIGHT):
+    if not (0 <= x < world_w and 0 <= y < world_h):
         return False
     return signed_dist[x, y] > margin
 
@@ -72,7 +74,7 @@ def get_forward_normal(line_center, waypoints):
 
 
 track_img = pygame.image.load("assets/bg.png").convert()
-track_img = pygame.transform.scale(track_img, (config.WIDTH * _rs, config.HEIGHT * _rs))
+track_img = pygame.transform.scale(track_img, (world_w * _rs, world_h * _rs))
 
 raw = find_start_line("assets/track_data.png")
 start_center = pygame.Vector2(raw.x * scale_x, raw.y * scale_y) if raw else None
@@ -97,12 +99,14 @@ def screen_to_game(pos):
 class Camera:
     def __init__(self):
         self.zoom = 1.0
-        self.follow = False
+        self.follow = world_w > config.WIDTH or world_h > config.HEIGHT
 
 
 camera = Camera()
-car_spawn = pygame.Vector2(1100, 600)
-start_angle = 90
+car_spawn = pygame.Vector2(
+    track_data["spawn_x"] * scale_x, track_data["spawn_y"] * scale_y
+)
+start_angle = track_data["spawn_angle"]
 car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
 
 running = True
@@ -158,7 +162,7 @@ while running:
             hud.handle_mousemotion(screen_to_game(event.pos), car, camera)
         if event.type == pygame.MOUSEBUTTONUP:
             hud.handle_mouseup()
-    game_surface.fill(config.BLACK)
+    game_surface.fill(bg_color)
 
     if visual_mode:
         keys = get_human_action(pygame.key.get_pressed())
@@ -202,8 +206,8 @@ while running:
     # camera-aware track draw
     rs = config.RENDER_SCALE
     zoom = camera.zoom
-    tw = int(config.WIDTH * zoom * rs)
-    th = int(config.HEIGHT * zoom * rs)
+    tw = int(world_w * zoom * rs)
+    th = int(world_h * zoom * rs)
     scaled_track = pygame.transform.smoothscale(track_img, (tw, th))
     if camera.follow:
         # track offset so car stays at viewport center
@@ -222,7 +226,7 @@ while running:
     #        game_surface.blit(surf, (wp.x - wp_size // 2, wp.y - wp_size // 2))
 
     if visual_mode:
-        car.draw(game_surface, camera)
+        car.draw(game_surface, camera, world_w, world_h)
 
         if paused_mode:
             rs = config.RENDER_SCALE
