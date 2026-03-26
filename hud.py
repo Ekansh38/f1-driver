@@ -2,12 +2,13 @@ import pygame
 import config
 
 SLIDERS = [
-    ("max_speed", "MAX SPD", 100, 800),
-    ("acceleration_force", "ACCEL", 50, 500),
+    ("max_speed", "MAX SPD", 100, 800),  # 100-800
+    ("acceleration_force", "ACCEL", 50, 500),  # 50-500
     ("brake_force", "BRAKE", 50, 500),
     ("turn_speed", "TURN", 50, 600),
+    ("turn_falloff", "TRN FALL", 0.5, 10.0),
     ("side_friction", "FRICTION", 0.1, 2.0),
-    ("track_margin", "MARGIN", -30, 20),
+    ("track_margin", "MARGIN", -50, 20),  # -30-20
     ("bounce", "BOUNCE", 0.0, 1.0),
 ]
 
@@ -112,10 +113,13 @@ class HUD:
         pygame.draw.rect(screen, (160, 160, 160), self.button_rect, 1)
 
         label = self.font_btn.render("HUD", True, (220, 220, 220))
-        screen.blit(label, (
-            x + btn_w // 2 - label.get_width() // 2,
-            y + btn_h // 2 - label.get_height() // 2,
-        ))
+        screen.blit(
+            label,
+            (
+                x + btn_w // 2 - label.get_width() // 2,
+                y + btn_h // 2 - label.get_height() // 2,
+            ),
+        )
 
         hint = self.font_label.render("[TAB]", True, (130, 130, 130))
         screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
@@ -136,7 +140,13 @@ class HUD:
         pygame.draw.rect(screen, border_color, self.graph_button_rect, 1)
 
         label = self.font_btn.render("GRAPH", True, (220, 220, 220))
-        screen.blit(label, (x + btn_w // 2 - label.get_width() // 2, y + btn_h // 2 - label.get_height() // 2))
+        screen.blit(
+            label,
+            (
+                x + btn_w // 2 - label.get_width() // 2,
+                y + btn_h // 2 - label.get_height() // 2,
+            ),
+        )
 
         hint = self.font_label.render("[G]", True, (130, 130, 130))
         screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
@@ -365,7 +375,9 @@ class HUD:
 
             knob_x = bar_x + fill_w
             pygame.draw.rect(
-                screen, (220, 220, 220), (knob_x - 3 * rs, cy - bar_h, 6 * rs, bar_h * 2)
+                screen,
+                (220, 220, 220),
+                (knob_x - 3 * rs, cy - bar_h, 6 * rs, bar_h * 2),
             )
 
             val_str = (
@@ -524,7 +536,9 @@ class HUD:
             sy = gy + gh - int(spd / max_kmh * gh)
             pygame.draw.line(screen, (40, 40, 40), (gx, sy), (gx + gw, sy), 1)
             lbl = self.font_label.render(str(spd), True, (60, 60, 60))
-            screen.blit(lbl, (gx - lbl.get_width() - 5 * rs, sy - lbl.get_height() // 2))
+            screen.blit(
+                lbl, (gx - lbl.get_width() - 5 * rs, sy - lbl.get_height() // 2)
+            )
 
         # best lap, faint gold
         if best_tele:
