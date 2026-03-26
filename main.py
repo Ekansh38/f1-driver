@@ -27,12 +27,16 @@ with open("track.json") as f:
     track_data = json.load(f)
 
 internal_res = track_data["internal_res"]
+
 world_w = track_data["world_w"]
 world_h = track_data["world_h"]
+
 _hex = track_data["background_color"].lstrip("#")
 bg_color = tuple(int(_hex[i : i + 2], 16) for i in (0, 2, 4))
+
 scale_x = world_w / track_data["painted_w"]
 scale_y = world_h / track_data["painted_h"]
+
 waypoints = [
     pygame.Vector2(p[0] * scale_x, p[1] * scale_y) for p in track_data["waypoints"]
 ]

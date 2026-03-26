@@ -35,9 +35,9 @@ class HUD:
         self.level = 0
         self.graph_open = False
         self.graph_idx = 0
-        self.font = pygame.font.SysFont("menlo", 22 * rs)
-        self.font_label = pygame.font.SysFont("menlo", 17 * rs)
-        self.font_btn = pygame.font.SysFont("menlo", 18 * rs)
+        self.font = pygame.font.SysFont("menlo", int(22 * rs))
+        self.font_label = pygame.font.SysFont("menlo", int(17 * rs))
+        self.font_btn = pygame.font.SysFont("menlo", int(18 * rs))
         self.button_rect = None
         self.graph_button_rect = None
         self.camera_button_rect = None
