@@ -18,6 +18,21 @@ GRASS = 1
 
 CAR_IMAGE_PATH = "assets/car.png"
 
+CAR_DEFAULTS = {
+    "max_speed": 400,
+    "acceleration_force": 200,
+    "brake_force": 250,
+    "turn_speed": 325,
+    "turn_falloff": 3.0,
+    "side_friction": 0.8,
+    "track_margin": 0,
+    "bounce": 0.4,
+}
+
+CAMERA_DEFAULTS = {
+    "zoom": 1.0,
+}
+
 # Controls
 
 CONTROLS = {

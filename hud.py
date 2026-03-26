@@ -43,6 +43,7 @@ class HUD:
         self.camera_button_rect = None
         self._slider_rects = []  # list of (obj, attr, bar_rect, min_v, max_v)
         self._dragging = None  # (obj, attr, bar_rect, min_v, max_v)
+        self._reset_button_rect = None
 
     def toggle(self):
         self.level = (self.level + 1) % 5
@@ -68,6 +69,14 @@ class HUD:
         if self.camera_button_rect and self.camera_button_rect.collidepoint(pos) and camera is not None:
             camera.follow = not camera.follow
             return
+        if self._reset_button_rect and self._reset_button_rect.collidepoint(pos):
+            if car is not None:
+                for attr, val in config.CAR_DEFAULTS.items():
+                    setattr(car, attr, val)
+            if camera is not None:
+                for attr, val in config.CAMERA_DEFAULTS.items():
+                    setattr(camera, attr, val)
+            return
         for obj, attr, bar_rect, min_v, max_v in self._slider_rects:
             if bar_rect.collidepoint(pos):
                 self._dragging = (obj, attr, bar_rect, min_v, max_v)
@@ -90,6 +99,8 @@ class HUD:
 
     def draw(self, screen, car, lap_timer, telemetry=None, ai_stats=None, fps=None, camera=None):
         self._fps = fps
+        if self.level != 4:
+            self._reset_button_rect = None
         self._draw_toggle_button(screen)
         self._draw_graph_button(screen)
         self._draw_camera_button(screen, camera)
@@ -367,7 +378,8 @@ class HUD:
         panel_w = 420 * rs
         row_h = 42 * rs
         header_h = self.LINE_HEIGHT + self.PADDING
-        panel_h = header_h + len(all_sliders) * row_h + self.PADDING
+        btn_h = 30 * rs
+        panel_h = header_h + len(all_sliders) * row_h + self.PADDING + btn_h + 10 * rs
         x = sw // 2 - panel_w // 2
         y = sh // 2 - panel_h // 2
 
@@ -423,6 +435,19 @@ class HUD:
                 self.font_label.render(val_str, True, (255, 255, 255)),
                 (bar_x + bar_w + 10 * rs, cy - 8 * rs),
             )
+
+        # Reset button
+        btn_w_reset = 100 * rs
+        btn_h = 30 * rs
+        btn_x = x + panel_w // 2 - btn_w_reset // 2
+        btn_y = y + header_h + len(all_sliders) * row_h + self.PADDING // 2
+        self._reset_button_rect = pygame.Rect(btn_x, btn_y, btn_w_reset, btn_h)
+        surf_btn = pygame.Surface((btn_w_reset, btn_h), pygame.SRCALPHA)
+        surf_btn.fill((40, 40, 40, 220))
+        screen.blit(surf_btn, (btn_x, btn_y))
+        pygame.draw.rect(screen, (180, 80, 80), self._reset_button_rect, 1)
+        lbl = self.font_btn.render("RESET", True, (220, 120, 120))
+        screen.blit(lbl, (btn_x + btn_w_reset // 2 - lbl.get_width() // 2, btn_y + btn_h // 2 - lbl.get_height() // 2))
 
     def _draw_graphs(self, screen, lap_timer, telemetry):
         rs = self.rs

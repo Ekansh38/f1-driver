@@ -16,14 +16,8 @@ class Car:
         self.angle = angle
 
         # tuning
-        self.acceleration_force = 200
-        self.brake_force = 250
-        self.max_speed = 400
-        self.turn_speed = 325
-        self.side_friction = 0.8
-        self.turn_falloff = 3.0
-        self.track_margin = 0
-        self.bounce = 0.4
+        for attr, val in config.CAR_DEFAULTS.items():
+            setattr(self, attr, val) # FIRE FUNCTION, that makes it SO EASY
 
     def get_forward_vector(self):
         rad = math.radians(self.angle)

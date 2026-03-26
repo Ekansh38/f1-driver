@@ -103,7 +103,7 @@ def screen_to_game(pos):
 class Camera:
     def __init__(self):
         self.zoom = 1.0
-        self.follow = world_w > config.WIDTH or world_h > config.HEIGHT
+        self.follow = world_w > config.WIDTH or world_h > config.HEIGHT # if the world is larger than the screen
 
 
 camera = Camera()
