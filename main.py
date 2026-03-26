@@ -1,6 +1,6 @@
 import pygame
 import config
-import racing_env.car as car
+import racing_env.car as car_module
 from utils import get_human_action
 import json
 import math
@@ -8,6 +8,7 @@ from racing_env.start_line import find_start_line
 from racing_env.lap_timer import LapTimer
 from racing_env.telemetry import LapTelemetry
 from hud import HUD
+from scipy.ndimage import distance_transform_edt
 
 # simple init stuf
 
@@ -22,9 +23,6 @@ clock = pygame.time.Clock()
 
 # load waypoints
 
-track_img = pygame.image.load("assets/waypoint_layer.png").convert()
-track_img = pygame.transform.scale(track_img, (config.WIDTH * _rs, config.HEIGHT * _rs))
-
 with open("track.json") as f:
     track_data = json.load(f)
 
@@ -38,23 +36,35 @@ waypoints = [pygame.Vector2(wp.x * scale_x, wp.y * scale_y) for wp in waypoints]
 track_width_scaled = track_width * scale_x
 
 
+mask = pygame.image.load("assets/track_mask.png").convert()
+mask = pygame.transform.scale(mask, (config.WIDTH, config.HEIGHT))
+
+
+mask_arr = pygame.surfarray.array3d(mask)
+on_track = mask_arr[:, :, 0] == 0
+
+dist_in = distance_transform_edt(on_track)  # from inside
+dist_out = distance_transform_edt(~on_track)  # from outside
+signed_dist = dist_in - dist_out  # positive inside negative outside
+
+
 def is_on_track(pos, margin=0):
-    return any(
-        max(abs(pos.x - wp.x), abs(pos.y - wp.y)) + margin < track_width_scaled
-        for wp in waypoints
-    )
+    x, y = int(pos.x), int(pos.y)
+    if not (0 <= x < config.WIDTH and 0 <= y < config.HEIGHT):
+        return False
+    return signed_dist[x, y] > margin
 
 
 # startline setup and also lap timer
 
 
 def get_forward_normal(line_center, waypoints):
-    # returns forward direction vector
-    dists = [(line_center.distance_to(wp), i) for i, wp in enumerate(waypoints)]
-    dists.sort()
-    idx = dists[0][1]
-    prev_wp = waypoints[(idx - 1) % len(waypoints)]
-    next_wp = waypoints[(idx + 1) % len(waypoints)]
+    nearest_idx = min(
+        range(len(waypoints)), key=lambda i: line_center.distance_to(waypoints[i])
+    )
+    step = max(1, len(waypoints) // 20)
+    prev_wp = waypoints[(nearest_idx - step) % len(waypoints)]
+    next_wp = waypoints[(nearest_idx + step) % len(waypoints)]
     direction = next_wp - prev_wp
     if direction.length() > 0:
         direction = direction.normalize()
@@ -68,15 +78,15 @@ raw = find_start_line("assets/waypoint_layer.png")
 start_center = pygame.Vector2(raw.x * scale_x, raw.y * scale_y) if raw else None
 if start_center:
     forward_normal = get_forward_normal(start_center, waypoints)
-    lap_timer = LapTimer(
-        start_center, forward_normal, proximity_threshold=track_width_scaled
-    )
+    proximity = float(signed_dist[int(start_center.x), int(start_center.y)])
+    lap_timer = LapTimer(start_center, forward_normal, proximity_threshold=proximity)
 else:
     lap_timer = None
 
 hud = HUD()
 telemetry = LapTelemetry()
 prev_lap_count = 0
+
 
 def screen_to_game(pos):
     sw, sh = screen.get_size()
@@ -86,7 +96,7 @@ def screen_to_game(pos):
 
 car_spawn = pygame.Vector2(1100, 600)
 start_angle = 90
-car = car.Car(car_spawn.x, car_spawn.y, start_angle)
+car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
 
 running = True
 paused = False
