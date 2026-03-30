@@ -46,6 +46,28 @@ class HUD:
         self._slider_rects = []  # list of (obj, attr, bar_rect, min_v, max_v)
         self._dragging = None  # (obj, attr, bar_rect, min_v, max_v)
         self._reset_button_rect = None
+        # track switcher
+        self.switcher_open = False
+        self.switcher_idx = 0
+        self.switcher_confirmed = False
+        self.switcher_button_rect = None
+        self._track_folders = []
+        self._track_names = []
+        self._track_previews = []  # scaled pygame.Surface per track
+
+    def setup_switcher(self, track_folders, current_idx):
+        import json, os
+        self._track_folders = track_folders
+        self._track_names = []
+        self._track_previews = []
+        self.switcher_idx = current_idx
+        for folder in track_folders:
+            with open(os.path.join(folder, "track.json")) as f:
+                data = json.load(f)
+            self._track_names.append(data.get("name", folder))
+            img = pygame.image.load(os.path.join(folder, "bg.png")).convert()
+            preview = pygame.transform.smoothscale(img, (480, 270))
+            self._track_previews.append(preview)
 
     def toggle(self):
         self.level = (self.level + 1) % 4
@@ -57,6 +79,19 @@ class HUD:
             self.graph_open = not self.graph_open
         elif key == pygame.K_p:
             self.params_open = not self.params_open
+        elif key == pygame.K_t:
+            self.switcher_open = not self.switcher_open
+        elif self.switcher_open:
+            n = len(self._track_folders)
+            if key == pygame.K_LEFT:
+                self.switcher_idx = (self.switcher_idx - 1) % n
+            elif key == pygame.K_RIGHT:
+                self.switcher_idx = (self.switcher_idx + 1) % n
+            elif key == pygame.K_RETURN:
+                self.switcher_confirmed = True
+                self.switcher_open = False
+            elif key == pygame.K_ESCAPE:
+                self.switcher_open = False
         elif self.graph_open:
             if key == pygame.K_LEFT:
                 self.graph_idx = (self.graph_idx - 1) % 2
@@ -78,6 +113,9 @@ class HUD:
             return
         if self.params_button_rect and self.params_button_rect.collidepoint(pos):
             self.params_open = not self.params_open
+            return
+        if self.switcher_button_rect and self.switcher_button_rect.collidepoint(pos):
+            self.switcher_open = not self.switcher_open
             return
         if self._reset_button_rect and self._reset_button_rect.collidepoint(pos):
             if car is not None:
@@ -115,10 +153,13 @@ class HUD:
         self._draw_graph_button(screen)
         self._draw_camera_button(screen, camera)
         self._draw_params_button(screen)
+        self._draw_switcher_button(screen)
         if self.graph_open:
             self._draw_graphs(screen, lap_timer, telemetry)
         if self.params_open:
             self._draw_car_params(screen, car, camera)
+        if self.switcher_open:
+            self._draw_track_switcher(screen)
         if self.level == 0:
             return
         self._draw_racing_panel(screen, car, lap_timer)
@@ -223,6 +264,81 @@ class HUD:
 
         hint = self.font_label.render("[P]", True, (130, 130, 130))
         screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
+
+    def _draw_switcher_button(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        btn_w, btn_h = 64 * rs, 28 * rs
+        x = 12 * rs + (btn_w + 8 * rs) * 4
+        y = sh - 52 * rs
+
+        self.switcher_button_rect = pygame.Rect(x, y, btn_w, btn_h)
+
+        surf = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 180))
+        screen.blit(surf, (x, y))
+        border_color = (255, 200, 80) if self.switcher_open else (160, 160, 160)
+        pygame.draw.rect(screen, border_color, self.switcher_button_rect, 1)
+
+        label = self.font_btn.render("TRACK", True, (220, 220, 220))
+        screen.blit(label, (x + btn_w // 2 - label.get_width() // 2, y + btn_h // 2 - label.get_height() // 2))
+
+        hint = self.font_label.render("[T]", True, (130, 130, 130))
+        screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
+
+    def _draw_track_switcher(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+
+        if not self._track_folders:
+            return
+
+        prev_w, prev_h = 480 * rs, 270 * rs
+        panel_w = prev_w + 80 * rs
+        panel_h = 60 * rs + prev_h + 60 * rs  # header + preview + footer
+        px = sw // 2 - panel_w // 2
+        py = sh // 2 - panel_h // 2
+
+        # background
+        surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 210))
+        screen.blit(surf, (px, py))
+        pygame.draw.rect(screen, (255, 200, 80), pygame.Rect(px, py, panel_w, panel_h), 1)
+
+        # header
+        title = self.font.render("SELECT TRACK", True, (255, 200, 80))
+        screen.blit(title, (px + panel_w // 2 - title.get_width() // 2, py + self.PADDING))
+
+        # preview image
+        idx = self.switcher_idx
+        if idx < len(self._track_previews):
+            preview = self._track_previews[idx]
+            scaled_prev = pygame.transform.smoothscale(preview, (prev_w, prev_h))
+            screen.blit(scaled_prev, (px + 40 * rs, py + 50 * rs))
+            # subtle border on preview
+            pygame.draw.rect(screen, (80, 80, 80), pygame.Rect(px + 40 * rs, py + 50 * rs, prev_w, prev_h), 1)
+
+        # track name
+        name = self._track_names[idx] if idx < len(self._track_names) else "?"
+        name_surf = self.font.render(name, True, (255, 255, 255))
+        name_y = py + 50 * rs + prev_h + 10 * rs
+        screen.blit(name_surf, (px + panel_w // 2 - name_surf.get_width() // 2, name_y))
+
+        # left arrow
+        n = len(self._track_folders)
+        left_idx = (idx - 1) % n
+        right_idx = (idx + 1) % n
+        arrow_y = py + 50 * rs + prev_h // 2 - 10 * rs
+
+        left_lbl = self.font_label.render(f"< {self._track_names[left_idx]}", True, (160, 160, 160))
+        screen.blit(left_lbl, (px + 4 * rs, arrow_y))
+
+        right_lbl = self.font_label.render(f"{self._track_names[right_idx]} >", True, (160, 160, 160))
+        screen.blit(right_lbl, (px + panel_w - right_lbl.get_width() - 4 * rs, arrow_y))
+
+        # footer hint
+        hint = self.font_label.render("ENTER  confirm      T / ESC  close", True, (100, 100, 100))
+        screen.blit(hint, (px + panel_w // 2 - hint.get_width() // 2, py + panel_h - 22 * rs))
 
     def _draw_panel(self, screen, x, y, lines):
         rs = self.rs
