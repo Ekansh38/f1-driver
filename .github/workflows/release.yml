@@ -10,15 +10,7 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - os: macos-latest
-            arch: arm64
-          - os: macos-13
-            arch: x86_64
-
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -39,9 +31,9 @@ jobs:
         run: pyinstaller f1-driver.spec
 
       - name: Package tarball
-        run: tar czf f1-driver-macos-${{ matrix.arch }}.tar.gz -C dist f1-driver
+        run: tar czf f1-driver-macos-arm64.tar.gz -C dist f1-driver
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: f1-driver-macos-${{ matrix.arch }}.tar.gz
+          files: f1-driver-macos-arm64.tar.gz
