@@ -62,7 +62,14 @@ Press `L` to open the panel and copy a lap. Press `V` to verify any signed strin
 
 The key lives in `key.py` which is gitignored. In a real competitive setting it would live server-side.
 
-## Setup
+## Install (macOS)
+
+```bash
+brew install Ekansh38/f1-driver/f1-driver
+f1-driver
+```
+
+## Setup (from source)
 
 ```bash
 python3 -m venv venv
