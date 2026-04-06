@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+          - os: macos-13
+            arch: x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Create key.py
+        run: echo 'SECRET_KEY = "f1-driver-demo-key"' > key.py
+
+      - name: Build with PyInstaller
+        run: pyinstaller f1-driver.spec
+
+      - name: Package tarball
+        run: tar czf f1-driver-macos-${{ matrix.arch }}.tar.gz -C dist f1-driver
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: f1-driver-macos-${{ matrix.arch }}.tar.gz

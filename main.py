@@ -6,12 +6,19 @@ from utils import get_human_action
 import json
 import math
 import os
+import sys
 from racing_env.start_line import find_start_line
 from racing_env.lap_timer import LapTimer
 from racing_env.telemetry import LapTelemetry
 from hud import HUD
 from scipy.ndimage import distance_transform_edt
 from hmac_util import sign_lap
+
+
+def _resource_path(relative):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative)
+    return relative
 
 visual_mode = True
 NUM_AI_CARS = 0
@@ -103,7 +110,9 @@ def load_track(folder):
     return data.get("name", folder)
 
 
-def discover_tracks(root="tracks"):
+def discover_tracks(root=None):
+    if root is None:
+        root = _resource_path("tracks")
     folders = []
     for entry in sorted(os.listdir(root)):
         path = os.path.join(root, entry)

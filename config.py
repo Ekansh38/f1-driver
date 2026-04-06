@@ -1,4 +1,12 @@
 import pygame
+import sys
+import os
+
+
+def _rp(p):
+    base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, p)
+
 
 # ENV SETTINGS
 WIDTH = 1280
@@ -16,7 +24,7 @@ BLUE = (0, 0, 255)
 TRACK = 0
 GRASS = 1
 
-CAR_IMAGE_PATH = "assets/car.png"
+CAR_IMAGE_PATH = _rp("assets/car.png")
 
 CAR_DEFAULTS = {
     "max_speed": 400,
