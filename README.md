@@ -4,28 +4,14 @@ A top-down racing simulator in Python. Drive on custom circuits, tune your car p
 
 <table>
   <tr>
-    <td><img src="READMEASSETS/moreassets/screenshot3.png"/></td>
-    <td><img src="READMEASSETS/moreassets/screenshot4.png"/></td>
+    <td><img src="READMEASSETS/moreassets/screenshot1.png" width="400"/></td>
+    <td><img src="READMEASSETS/moreassets/screenshot2.png" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src="READMEASSETS/moreassets/screenshot3.png" width="400"/></td>
+    <td><img src="READMEASSETS/moreassets/screenshot4.png" width="400"/></td>
   </tr>
 </table>
-
-## Demo
-
-**Driving and lap timer**
-
-<video src="READMEASSETS/driving.mov" controls></video>
-
-**Track switcher**
-
-<video src="READMEASSETS/track-switcher.mov" controls></video>
-
-**Car params**
-
-<video src="READMEASSETS/car-params.mov" controls></video>
-
-**Signed lap verification**
-
-<video src="READMEASSETS/lap-signing.mov" controls></video>
 
 ## Features
 
