@@ -65,7 +65,8 @@ The key lives in `key.py` which is gitignored. In a real competitive setting it 
 ## Install (macOS)
 
 ```bash
-brew install Ekansh38/f1-driver/f1-driver
+brew tap Ekansh38/f1-driver
+brew install f1-driver
 f1-driver
 ```
 
