@@ -23,7 +23,7 @@ AI_COLORS = [
 
 pygame.init()
 screen = pygame.display.set_mode((config.WIDTH, config.HEIGHT), pygame.RESIZABLE)
-pygame.display.set_caption("rl-driver")
+pygame.display.set_caption("f1-driver")
 _rs = config.RENDER_SCALE
 game_surface = pygame.Surface((config.WIDTH * _rs, config.HEIGHT * _rs))
 clock = pygame.time.Clock()
