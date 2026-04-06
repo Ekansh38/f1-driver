@@ -13,6 +13,18 @@ A top-down racing simulator in Python. Drive on custom circuits, tune your car p
   </tr>
 </table>
 
+## DEMO VIDEOS
+
+
+https://github.com/user-attachments/assets/499fdbb9-c980-4e8d-aefd-d6083af5de17
+
+https://github.com/user-attachments/assets/496d50dc-dacb-45b5-80d3-1cb2a6ce5ecd
+
+https://github.com/user-attachments/assets/a502291a-9315-4b31-ba09-db75fe073751
+
+https://github.com/user-attachments/assets/e4e8bdca-6612-42a9-a8dd-bb48eceeb83d
+
+
 ## Features
 
 - **Custom tracks** with a built-in track switcher
