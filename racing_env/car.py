@@ -4,7 +4,7 @@ import config
 
 
 class Car:
-    def __init__(self, x, y, angle):
+    def __init__(self, x, y, angle, team_color=None):
         rs = config.RENDER_SCALE
         self._base_surface = pygame.image.load(config.CAR_IMAGE_PATH).convert_alpha()
         self._base_surface = pygame.transform.scale(
@@ -14,6 +14,7 @@ class Car:
         self.position = pygame.Vector2(x, y)
         self.velocity = pygame.Vector2(0, 0)
         self.angle = angle
+        self.team_color = team_color
 
         # tuning
         for attr, val in config.CAR_DEFAULTS.items():
@@ -57,7 +58,7 @@ class Car:
 
         self.position += self.velocity * dt
 
-    def draw(self, screen, camera, world_w, world_h):
+    def draw(self, screen, camera, world_w, world_h, cam_target=None):
         rs = config.RENDER_SCALE
         zoom = camera.zoom
         size = int(40 * rs * zoom)
@@ -68,8 +69,10 @@ class Car:
         rotated = pygame.transform.rotate(surf, angle)
 
         if camera.follow > 0:
-            cx = config.WIDTH * rs // 2
-            cy = config.HEIGHT * rs // 2
+            target = cam_target if cam_target is not None else self.position
+            offset = (self.position - target) * zoom * rs
+            cx = int(config.WIDTH * rs // 2 + offset.x)
+            cy = int(config.HEIGHT * rs // 2 + offset.y)
         else:
             cx = int(
                 config.WIDTH * rs // 2 + (self.position.x - world_w / 2) * zoom * rs
@@ -77,6 +80,9 @@ class Car:
             cy = int(
                 config.HEIGHT * rs // 2 + (self.position.y - world_h / 2) * zoom * rs
             )
+
+        if self.team_color:
+            pygame.draw.circle(screen, self.team_color, (cx, cy), int(22 * rs * zoom))
 
         rect = rotated.get_rect(center=(cx, cy))
         screen.blit(rotated, rect.topleft)

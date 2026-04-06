@@ -1,4 +1,5 @@
 import pygame
+from ai import dumb_ai
 import config
 import racing_env.car as car_module
 from utils import get_human_action
@@ -10,8 +11,15 @@ from racing_env.lap_timer import LapTimer
 from racing_env.telemetry import LapTelemetry
 from hud import HUD
 from scipy.ndimage import distance_transform_edt
+from hmac_util import sign_lap
 
 visual_mode = True
+NUM_AI_CARS = 1
+AI_COLORS = [
+    (100, 160, 255),
+    (255, 120, 120),
+    (120, 255, 120),
+]
 
 pygame.init()
 screen = pygame.display.set_mode((config.WIDTH, config.HEIGHT), pygame.RESIZABLE)
@@ -84,7 +92,8 @@ def load_track(folder):
     if start_center:
         forward_normal = get_forward_normal(start_center, waypoints)
         proximity = float(signed_dist[int(start_center.x), int(start_center.y)])
-        lap_timer = LapTimer(start_center, forward_normal, proximity_threshold=proximity)
+        lap_timer = LapTimer(start_center, forward_normal, proximity_threshold=proximity,
+                             track_name=data.get("name", ""))
     else:
         lap_timer = None
 
@@ -128,7 +137,10 @@ telemetry_accum = 0.0
 TELEMETRY_INTERVAL = 1 / 60
 
 camera = Camera()
-car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
+cars = [car_module.Car(car_spawn.x, car_spawn.y, start_angle)]
+for _i in range(NUM_AI_CARS):
+    cars.append(car_module.Car(car_spawn.x, car_spawn.y, start_angle, team_color=AI_COLORS[_i % len(AI_COLORS)]))
+car = cars[0]
 
 running = True
 paused = False
@@ -160,15 +172,16 @@ while running:
                     camera.follow += 1
 
             if event.key == pygame.K_r:
-                car.position = pygame.Vector2(car_spawn)
-                car.velocity = pygame.Vector2(0, 0)
-                car.angle = start_angle
+                for c in cars:
+                    c.position = pygame.Vector2(car_spawn)
+                    c.velocity = pygame.Vector2(0, 0)
+                    c.angle = start_angle
                 if lap_timer:
                     lap_timer.reset()
                 paused_mode = False
                 telemetry._current = []
 
-            hud.handle_keydown(event.key)
+            hud.handle_keydown(event.key, lap_timer=lap_timer)
 
             paused = paused_mode or hud.graph_open or hud.params_open or hud.switcher_open
             if lap_timer:
@@ -190,15 +203,18 @@ while running:
             hud.handle_mousemotion(screen_to_game(event.pos))
         if event.type == pygame.MOUSEBUTTONUP:
             hud.handle_mouseup()
+        if event.type == pygame.TEXTINPUT:
+            hud.handle_textinput(event.text)
     # handle confirmed track switch
     if hud.switcher_confirmed:
         hud.switcher_confirmed = False
         current_track_idx = hud.switcher_idx
         load_track(TRACK_FOLDERS[current_track_idx])
         hud.setup_switcher(TRACK_FOLDERS, current_track_idx)
-        car.position = pygame.Vector2(car_spawn)
-        car.velocity = pygame.Vector2(0, 0)
-        car.angle = start_angle
+        cars = [car_module.Car(car_spawn.x, car_spawn.y, start_angle)]
+        for _i in range(NUM_AI_CARS):
+            cars.append(car_module.Car(car_spawn.x, car_spawn.y, start_angle, team_color=AI_COLORS[_i % len(AI_COLORS)]))
+        car = cars[0]
         telemetry._current = []
         telemetry.laps = []
         prev_lap_count = 0
@@ -212,12 +228,17 @@ while running:
 
     if visual_mode:
         keys = get_human_action(pygame.key.get_pressed())
-    else:
-        keys = {"up": False, "down": False, "left": False, "right": False, "brake": False}
+    elif not visual_mode:
+        keys = dumb_ai()
 
     blocked_by_line = False
     if not paused:
-        car.update(dt, keys)
+        for _ci, c in enumerate(cars):
+            action = keys if _ci == 0 else dumb_ai()
+            c.update(dt, action)
+            if not is_on_track(c.position, c.track_margin):
+                c.position -= c.velocity * dt
+                c.velocity *= -c.bounce
 
         telemetry_accum += dt
         if lap_timer and lap_timer.state == "timing" and telemetry_accum >= TELEMETRY_INTERVAL:
@@ -225,15 +246,14 @@ while running:
         if telemetry_accum >= TELEMETRY_INTERVAL:
             telemetry_accum -= TELEMETRY_INTERVAL
         if lap_timer and len(lap_timer.laps) > prev_lap_count:
+            is_official = all(
+                getattr(car, k) == v for k, v in config.CAR_DEFAULTS.items()
+            )
+            lap_timer.signed_laps.append(
+                sign_lap(lap_timer.track_name, lap_timer.laps[-1], official=is_official)
+            )
             telemetry.finish_lap()
             prev_lap_count = len(lap_timer.laps)
-
-        if not is_on_track(car.position, car.track_margin):
-            car.position -= car.velocity * dt
-            if visual_mode:
-                car.velocity *= -car.bounce
-            else:
-                car.velocity *= 0
 
         if lap_timer and lap_timer.state == "timing":
             if car.position.distance_to(lap_timer.center) < lap_timer.proximity * 2:
@@ -270,7 +290,9 @@ while running:
     game_surface.blit(scaled_track, rect)
 
     if visual_mode:
-        car.draw(game_surface, camera, world_w, world_h)
+        cars[0].draw(game_surface, camera, world_w, world_h)
+        for c in cars[1:]:
+            c.draw(game_surface, camera, world_w, world_h, cam_target=cars[0].position)
 
         if paused_mode:
             rs = config.RENDER_SCALE
@@ -285,7 +307,7 @@ while running:
         if lap_timer:
             if not paused:
                 lap_timer.update(car.position, car.velocity, dt)
-            hud.draw(game_surface, car, lap_timer, telemetry, fps=clock.get_fps(), camera=camera)
+            hud.draw(game_surface, car, lap_timer, telemetry, fps=clock.get_fps(), camera=camera, dt=dt)
 
         if blocked_by_line:
             rs = config.RENDER_SCALE

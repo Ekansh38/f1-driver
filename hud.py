@@ -1,6 +1,17 @@
 import pygame
 import config
 
+
+def _copy_to_clipboard(text):
+    import subprocess, sys
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["pbcopy"], input=text.encode())
+        else:
+            subprocess.run(["xclip", "-selection", "clipboard"], input=text.encode())
+    except Exception:
+        pass
+
 SLIDERS = [
     ("max_speed", "MAX SPD", 100, 800),  # 100-800
     ("acceleration_force", "ACCEL", 50, 500),  # 50-500
@@ -54,6 +65,16 @@ class HUD:
         self._track_folders = []
         self._track_names = []
         self._track_previews = []  # scaled pygame.Surface per track
+        # sign / verify
+        self.sign_open = False
+        self.sign_button_rect = None
+        self._sign_entry_rects = []   # list of (rect, signed_string)
+        self.verify_button_rect = None
+        self._toast_msg = None
+        self._toast_timer = 0.0
+        self._toast_color = (255, 255, 255)
+        self.verify_open = False
+        self.verify_text = ""
 
     def setup_switcher(self, track_folders, current_idx):
         import json, os
@@ -72,7 +93,7 @@ class HUD:
     def toggle(self):
         self.level = (self.level + 1) % 4
 
-    def handle_keydown(self, key):
+    def handle_keydown(self, key, lap_timer=None):
         if key == pygame.K_TAB:
             self.toggle()
         elif key == pygame.K_g:
@@ -81,6 +102,35 @@ class HUD:
             self.params_open = not self.params_open
         elif key == pygame.K_t:
             self.switcher_open = not self.switcher_open
+        elif key == pygame.K_l:
+            self.sign_open = not self.sign_open
+        elif key == pygame.K_v and not self.verify_open:
+            self.verify_open = True
+            self.verify_text = ""
+            pygame.key.start_text_input()
+        elif self.verify_open:
+            if key == pygame.K_RETURN or key == pygame.K_KP_ENTER:
+                self._run_verify()
+            elif key == pygame.K_ESCAPE:
+                self.verify_open = False
+                self.verify_text = ""
+                pygame.key.stop_text_input()
+            elif key == pygame.K_BACKSPACE:
+                self.verify_text = self.verify_text[:-1]
+            else:
+                mods = pygame.key.get_mods()
+                if key == pygame.K_v and (mods & pygame.KMOD_META or mods & pygame.KMOD_CTRL):
+                    try:
+                        import subprocess
+                        pasted = subprocess.run(
+                            ['pbpaste'], capture_output=True
+                        ).stdout.decode()
+                        self.verify_text = pasted.strip()
+                    except Exception:
+                        pass
+        elif self.sign_open:
+            if key == pygame.K_ESCAPE:
+                self.sign_open = False
         elif self.switcher_open:
             n = len(self._track_folders)
             if key == pygame.K_LEFT:
@@ -117,6 +167,20 @@ class HUD:
         if self.switcher_button_rect and self.switcher_button_rect.collidepoint(pos):
             self.switcher_open = not self.switcher_open
             return
+        if self.sign_button_rect and self.sign_button_rect.collidepoint(pos):
+            self.sign_open = not self.sign_open
+            return
+        if self.verify_button_rect and self.verify_button_rect.collidepoint(pos):
+            self.verify_open = True
+            self.verify_text = ""
+            pygame.key.start_text_input()
+            return
+        if self.sign_open:
+            for i, (rect, signed_str) in enumerate(self._sign_entry_rects):
+                if rect.collidepoint(pos):
+                    _copy_to_clipboard(signed_str)
+                    self._toast(f"Copied L{i + 1}", (100, 220, 100), duration=2.0)
+                    return
         if self._reset_button_rect and self._reset_button_rect.collidepoint(pos):
             if car is not None:
                 for attr, val in config.CAR_DEFAULTS.items():
@@ -145,8 +209,9 @@ class HUD:
         value = min_v + t * (max_v - min_v)
         setattr(obj, attr, round(value, 2))
 
-    def draw(self, screen, car, lap_timer, telemetry=None, ai_stats=None, fps=None, camera=None):
+    def draw(self, screen, car, lap_timer, telemetry=None, ai_stats=None, fps=None, camera=None, dt=0.0):
         self._fps = fps
+        self._toast_timer = max(0.0, self._toast_timer - dt)
         if not self.params_open:
             self._reset_button_rect = None
         self._draw_toggle_button(screen)
@@ -154,12 +219,18 @@ class HUD:
         self._draw_camera_button(screen, camera)
         self._draw_params_button(screen)
         self._draw_switcher_button(screen)
+        self._draw_sign_button(screen)
+        self._draw_verify_button(screen)
         if self.graph_open:
             self._draw_graphs(screen, lap_timer, telemetry)
         if self.params_open:
             self._draw_car_params(screen, car, camera)
         if self.switcher_open:
             self._draw_track_switcher(screen)
+        if self.sign_open:
+            self._draw_sign_panel(screen, lap_timer)
+        if self.verify_open:
+            self._draw_verify_input(screen)
         if self.level == 0:
             return
         self._draw_racing_panel(screen, car, lap_timer)
@@ -168,6 +239,177 @@ class HUD:
             self._draw_ai_panel(screen, ai_stats)
         if self.level == 3:
             self._draw_lap_history(screen, lap_timer)
+        if self._toast_timer > 0 and self._toast_msg:
+            self._draw_toast(screen)
+
+    def _toast(self, msg, color=(255, 255, 255), duration=1.5):
+        self._toast_msg = msg
+        self._toast_color = color
+        self._toast_timer = duration
+
+    def _draw_toast(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        lbl = self.font.render(self._toast_msg, True, self._toast_color)
+        pad = 12 * rs
+        w = lbl.get_width() + pad * 2
+        h = lbl.get_height() + pad
+        x = sw // 2 - w // 2
+        y = sh - 110 * rs
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 200))
+        screen.blit(surf, (x, y))
+        screen.blit(lbl, (x + pad, y + pad // 2))
+
+    def handle_textinput(self, text):
+        if self.verify_open:
+            self.verify_text += text
+
+    def _run_verify(self):
+        from hmac_util import verify_lap
+        val = self.verify_text.strip()
+        self.verify_open = False
+        self.verify_text = ""
+        pygame.key.stop_text_input()
+        if not val:
+            return
+        if verify_lap(val):
+            data = val.rsplit(" ", 1)[0]
+            unofficial = "[unofficial]" in data
+            clean = data.replace("[unofficial]", "")
+            try:
+                time_part, track_part = clean.split(",", 1)
+            except ValueError:
+                time_part, track_part = clean, "?"
+            info = f"{time_part}  {track_part.upper()}"
+            if unofficial:
+                self._toast(f"AUTHENTIC (NOT OFFICIAL)  {info}", (255, 200, 80), duration=3.0)
+            else:
+                self._toast(f"AUTHENTIC  {info}", (100, 220, 100), duration=3.0)
+        else:
+            self._toast("INVALID", (220, 80, 80), duration=2.0)
+
+    def _draw_verify_input(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        panel_w = 640 * rs
+        panel_h = 110 * rs
+        px = sw // 2 - panel_w // 2
+        py = sh // 2 - panel_h // 2
+
+        surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 225))
+        screen.blit(surf, (px, py))
+        pygame.draw.rect(screen, (160, 160, 160), pygame.Rect(px, py, panel_w, panel_h), 1)
+
+        title = self.font.render("VERIFY LAP", True, (200, 200, 200))
+        screen.blit(title, (px + self.PADDING, py + self.PADDING))
+
+        hint = self.font_label.render(
+            "Cmd+V to paste, Enter to verify, Esc to cancel", True, (90, 90, 90)
+        )
+        screen.blit(hint, (px + self.PADDING, py + self.PADDING + self.LINE_HEIGHT + 2 * rs))
+
+        input_rect = pygame.Rect(
+            px + self.PADDING,
+            py + panel_h - 36 * rs,
+            panel_w - self.PADDING * 2,
+            26 * rs,
+        )
+        pygame.draw.rect(screen, (35, 35, 35), input_rect)
+        pygame.draw.rect(screen, (200, 200, 200), input_rect, 1)
+
+        # show last 55 chars so the end (hash) is visible
+        display = self.verify_text[-55:] if len(self.verify_text) > 55 else self.verify_text
+        text_surf = self.font_label.render(display + "|", True, (255, 255, 255))
+        screen.blit(
+            text_surf,
+            (input_rect.x + 4 * rs, input_rect.y + input_rect.height // 2 - text_surf.get_height() // 2),
+        )
+
+    def _draw_sign_button(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        btn_w, btn_h = 64 * rs, 28 * rs
+        x = 12 * rs + (btn_w + 8 * rs) * 5
+        y = sh - 52 * rs
+        self.sign_button_rect = pygame.Rect(x, y, btn_w, btn_h)
+        surf = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 180))
+        screen.blit(surf, (x, y))
+        border_color = (80, 220, 200) if self.sign_open else (160, 160, 160)
+        pygame.draw.rect(screen, border_color, self.sign_button_rect, 1)
+        label = self.font_btn.render("SIGN", True, (220, 220, 220))
+        screen.blit(label, (x + btn_w // 2 - label.get_width() // 2, y + btn_h // 2 - label.get_height() // 2))
+        hint = self.font_label.render("[L]", True, (130, 130, 130))
+        screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
+
+    def _draw_verify_button(self, screen):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        btn_w, btn_h = 64 * rs, 28 * rs
+        x = 12 * rs + (btn_w + 8 * rs) * 6
+        y = sh - 52 * rs
+        self.verify_button_rect = pygame.Rect(x, y, btn_w, btn_h)
+        surf = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 180))
+        screen.blit(surf, (x, y))
+        pygame.draw.rect(screen, (160, 160, 160), self.verify_button_rect, 1)
+        label = self.font_btn.render("VERIFY", True, (220, 220, 220))
+        screen.blit(label, (x + btn_w // 2 - label.get_width() // 2, y + btn_h // 2 - label.get_height() // 2))
+        hint = self.font_label.render("[V]", True, (130, 130, 130))
+        screen.blit(hint, (x + btn_w // 2 - hint.get_width() // 2, y + btn_h + 3 * rs))
+
+    def _draw_sign_panel(self, screen, lap_timer):
+        rs = self.rs
+        sw, sh = screen.get_size()
+        self._sign_entry_rects = []
+        signed = lap_timer.signed_laps if lap_timer else []
+
+        row_h = 36 * rs
+        header_h = self.LINE_HEIGHT + self.PADDING * 2
+        footer_h = 24 * rs
+        panel_w = 500 * rs
+        panel_h = header_h + max(1, len(signed)) * row_h + footer_h + self.PADDING
+        px = sw // 2 - panel_w // 2
+        py = sh // 2 - panel_h // 2
+
+        surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 215))
+        screen.blit(surf, (px, py))
+        pygame.draw.rect(screen, (80, 220, 200), pygame.Rect(px, py, panel_w, panel_h), 1)
+
+        title = self.font.render("SIGNED LAPS", True, (80, 220, 200))
+        screen.blit(title, (px + panel_w // 2 - title.get_width() // 2, py + self.PADDING))
+
+        if not signed:
+            msg = self.font_label.render("No laps signed yet — complete a lap first", True, (100, 100, 100))
+            screen.blit(msg, (px + panel_w // 2 - msg.get_width() // 2, py + header_h + 8 * rs))
+        else:
+            for i, s in enumerate(signed):
+                data_part = s.rsplit(" ", 1)[0]  # hide hash in panel display
+                ry = py + header_h + i * row_h
+                entry_rect = pygame.Rect(px + self.PADDING, ry, panel_w - self.PADDING * 2, row_h - 4 * rs)
+                self._sign_entry_rects.append((entry_rect, s))
+
+                hover_surf = pygame.Surface((entry_rect.width, entry_rect.height), pygame.SRCALPHA)
+                hover_surf.fill((255, 255, 255, 12))
+                screen.blit(hover_surf, (entry_rect.x, entry_rect.y))
+                pygame.draw.rect(screen, (60, 60, 60), entry_rect, 1)
+
+                unofficial = "[unofficial]" in data_part
+                num = self.font_label.render(f"L{i + 1}", True, (120, 120, 120))
+                screen.blit(num, (entry_rect.x + 6 * rs, ry + row_h // 2 - num.get_height() // 2))
+                display_data = data_part.replace("[unofficial]", "")
+                data_color = (255, 200, 80) if unofficial else (255, 255, 255)
+                data_lbl = self.font.render(display_data, True, data_color)
+                screen.blit(data_lbl, (entry_rect.x + 36 * rs, ry + row_h // 2 - data_lbl.get_height() // 2))
+                if unofficial:
+                    tag = self.font_label.render("NOT OFFICIAL", True, (255, 140, 40))
+                    screen.blit(tag, (entry_rect.x + 36 * rs + data_lbl.get_width() + 8 * rs, ry + row_h // 2 - tag.get_height() // 2))
+
+        hint = self.font_label.render("Click entry to copy   L / ESC to close", True, (80, 80, 80))
+        screen.blit(hint, (px + panel_w // 2 - hint.get_width() // 2, py + panel_h - footer_h))
 
     def _draw_toggle_button(self, screen):
         rs = self.rs

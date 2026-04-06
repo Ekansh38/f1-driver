@@ -2,7 +2,7 @@
   "internal_res": 8,
   "world_w": 2560,
   "world_h": 1440,
-  "background_color": "#FFFFFF",
+  "background_color": "#71ba1a",
   "spawn_x": 10,
   "spawn_y": 10,
   "spawn_angle": -90,
@@ -3566,5 +3566,5 @@
       166
     ]
   ],
-  "name": "Circuit 2"
+  "name": "PLAZA CIRITUO"
 }

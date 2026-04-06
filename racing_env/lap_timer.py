@@ -5,13 +5,15 @@ import config
 class LapTimer:
     COOLDOWN = 0.5
 
-    def __init__(self, line_center, forward_normal, proximity_threshold):
+    def __init__(self, line_center, forward_normal, proximity_threshold, track_name=""):
         self.center = line_center
         self.normal = forward_normal
         self.proximity = proximity_threshold
+        self.track_name = track_name
         self.state = "waiting"  # "waiting" | "timing"
         self.start_time = 0.0
         self.laps = []
+        self.signed_laps = []
         self.prev_dist = None
         self.cooldown = 0.0
         self.paused = False
@@ -33,7 +35,9 @@ class LapTimer:
                     self.start_time = now
                     self.cooldown = self.COOLDOWN
                 elif self.state == "timing":
-                    self.laps.append(now - self.start_time)
+                    lap_time = now - self.start_time
+                    self.laps.append(lap_time)
+                    # signing happens in main.py where car params are accessible
                     self.start_time = now
                     self.cooldown = self.COOLDOWN
 
@@ -46,6 +50,7 @@ class LapTimer:
         self.cooldown = 0.0
         self.paused = False
         self.paused_time = 0.0
+        self.signed_laps = []
 
     def pause(self):
         self.paused_time = self.current_time()
