@@ -14,7 +14,7 @@ from scipy.ndimage import distance_transform_edt
 from hmac_util import sign_lap
 
 visual_mode = True
-NUM_AI_CARS = 1
+NUM_AI_CARS = 0
 AI_COLORS = [
     (100, 160, 255),
     (255, 120, 120),

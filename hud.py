@@ -209,7 +209,7 @@ class HUD:
         value = min_v + t * (max_v - min_v)
         setattr(obj, attr, round(value, 2))
 
-    def draw(self, screen, car, lap_timer, telemetry=None, ai_stats=None, fps=None, camera=None, dt=0.0):
+    def draw(self, screen, car, lap_timer, telemetry=None, fps=None, camera=None, dt=0.0):
         self._fps = fps
         self._toast_timer = max(0.0, self._toast_timer - dt)
         if not self.params_open:
@@ -236,7 +236,6 @@ class HUD:
         self._draw_racing_panel(screen, car, lap_timer)
         if self.level == 2:
             self._draw_car_panel(screen, car)
-            self._draw_ai_panel(screen, ai_stats)
         if self.level == 3:
             self._draw_lap_history(screen, lap_timer)
         if self._toast_timer > 0 and self._toast_msg:
@@ -678,27 +677,6 @@ class HUD:
         ]
         self._draw_panel(screen, 12 * rs, 12 * rs, lines)
 
-    def _draw_ai_panel(self, screen, ai_stats):
-        rs = self.rs
-        sw, sh = screen.get_size()
-        if ai_stats:
-            lines = [
-                ("GEN", str(ai_stats.get("generation", "--"))),
-                ("FITNESS", str(ai_stats.get("fitness", "--"))),
-                ("SPECIES", str(ai_stats.get("species", "--"))),
-                ("EPISODE", f"{ai_stats.get('episode_time', '--')}s"),
-            ]
-        else:
-            lines = [
-                ("GEN", "--"),
-                ("FITNESS", "--"),
-                ("SPECIES", "--"),
-                ("EPISODE", "--"),
-            ]
-
-        panel_w = 240 * rs
-        x = sw - panel_w - 12 * rs
-        self._draw_panel(screen, x, 12 * rs, lines)
 
     def _draw_lap_history(self, screen, lap_timer):
         rs = self.rs

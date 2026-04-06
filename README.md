@@ -1,41 +1,58 @@
 # f1-driver
 
-A top-down racing simulator written in Python with pygame-ce. Drive on custom tracks, tune your car, and record cryptographically signed lap times.
+A top-down racing simulator in Python. Drive on custom circuits, tune your car physics, and record cryptographically signed lap times.
 
-![screenshot](./assets/Screenshot1.png)
+<table>
+  <tr>
+    <td><img src="READMEASSETS/moreassets/screenshot3.png"/></td>
+    <td><img src="READMEASSETS/moreassets/screenshot4.png"/></td>
+  </tr>
+</table>
 
----
+## Demo
+
+**Driving and lap timer**
+
+<video src="READMEASSETS/driving.mov" controls></video>
+
+**Track switcher**
+
+<video src="READMEASSETS/track-switcher.mov" controls></video>
+
+**Car params**
+
+<video src="READMEASSETS/car-params.mov" controls></video>
+
+**Signed lap verification**
+
+<video src="READMEASSETS/lap-signing.mov" controls></video>
 
 ## Features
 
-- **Custom tracks** — multiple circuits with a built-in track switcher
-- **Tunable car physics** — adjust acceleration, braking, grip, top speed, and more from an in-game params menu
-- **Lap timer** — automatic detection with finish-line proximity check
-- **Cryptographic lap authentication** — lap times are signed with HMAC-SHA256. Share a signed string and anyone with the key can verify it's legitimate and unmodified
-- **Multi-car support** — 1 human driver + configurable AI opponents using a simple input interface (neural net drop-in ready)
-- **Camera modes** — follow cam, fixed overhead, rotated cockpit view
-- **Telemetry** — per-lap speed and input recording
-
----
+- **Custom tracks** with a built-in track switcher
+- **Tunable car physics** (acceleration, braking, grip, top speed) from an in-game params menu
+- **Lap timer** with automatic finish-line detection
+- **Signed lap times** using HMAC-SHA256. Lap strings are shareable and verifiable by anyone with the key
+- **Multi-car** with 1 human driver and configurable AI opponents (built to be neural net ready)
+- **Camera modes**: follow cam, fixed overhead, rotated cockpit view
+- **Per-lap telemetry** recording
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
 | W / A / S / D | Accelerate / steer left / brake / steer right |
-| R | Reset car to start |
+| R | Reset to start |
 | C | Cycle camera mode |
-| Tab | Open track switcher |
-| P | Open car params menu |
-| L | Open signed laps panel (copy a lap to clipboard) |
-| V | Verify a signed lap string |
+| Tab | Track switcher |
+| P | Car params menu |
+| L | Signed laps panel |
+| V | Verify a lap string |
 | Escape | Pause |
-
----
 
 ## Signed Lap Times
 
-When you complete a lap with default car parameters, it is automatically signed with **HMAC-SHA256** and stored in the laps panel (`[L]`).
+Every lap completed with default car params gets signed automatically with HMAC-SHA256 and stored in the laps panel.
 
 The signed string looks like:
 
@@ -43,14 +60,9 @@ The signed string looks like:
 01:23.456,gragram a3f9c2...
 ```
 
-- Copy it with `[L]` → click the lap entry
-- Verify any string with `[V]` → paste → Enter
-- The verifier shows the lap time and track name if authentic
-- Laps completed with modified car params are tagged `[unofficial]` and still signable, but clearly marked
+Press `L` to open the panel and copy a lap. Press `V` to verify any signed string (paste it in, hit Enter). The verifier confirms the lap time and track name. Laps with modified car params are tagged `[unofficial]`.
 
-The secret key lives in `key.py` (gitignored). In a competitive setting this would live server-side.
-
----
+The key lives in `key.py` which is gitignored. In a real competitive setting it would live server-side.
 
 ## Setup
 
@@ -61,10 +73,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-> Requires Python 3.11+ and pygame-ce (not pygame). The `requirements.txt` handles this.
-
----
+Requires Python 3.11+ and pygame-ce (not vanilla pygame).
 
 ## Adding Tracks
 
-Drop a track folder into `tracks/` with a `track.png` and `data.json` (spawn point, lap line, track name). The switcher picks it up automatically.
+Drop a folder into `tracks/` with a `track.png` and `data.json` (spawn coords, lap line, track name). The switcher picks it up automatically.
