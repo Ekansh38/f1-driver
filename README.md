@@ -71,10 +71,12 @@ f1-driver
 ## Setup (from source)
 
 ```bash
+git clone https://github.com/Ekansh38/f1-driver.git
+cd f1-driver
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-python main.py
+pip3 install -r requirements.txt
+python3 main.py
 ```
 
 Requires Python 3.11+ and pygame-ce (not vanilla pygame).
@@ -109,7 +111,7 @@ my-track/
 
 ### Pick a preset
 
-The game window is always **1280x720**. Tracks smaller than that use a fixed overhead camera. Tracks larger than that automatically switch to follow cam so the car stays visible.
+The game renders at **1280x720** internally (it scales to whatever window size you have, but 1280x720 is the reference). Tracks the same size or smaller get a fixed overhead camera — the whole track fits on screen. Tracks larger than that automatically switch to follow cam so the car stays visible.
 
 | Preset | Camera | Low-res canvas | bg.png | internal_res |
 |--------|--------|---------------|--------|--------------|
@@ -117,11 +119,11 @@ The game window is always **1280x720**. Tracks smaller than that use a fixed ove
 | Medium | Follow cam | 320x180 | 2560x1440 | 8 |
 | Large | Follow cam | 640x360 | 2560x1440 | 4 |
 
-**Small / fixed:** the whole track is visible at once, no camera movement. Good for tight, technical layouts. Like Green Roads.
+**Small / fixed:** world is 1280x720, same as the screen. No camera movement, full track visible. Lap times usually under 30 seconds. Like Green Roads.
 
-**Medium:** the camera follows the car around a larger world. Good for flowing circuits. Like Circuiti Olompyia.
+**Medium:** world is 2560x1440, camera follows the car. Lap times 30-90 seconds. Like Circuiti Olompyia.
 
-**Large:** even more track real-estate. Use `internal_res: 4` to keep file sizes reasonable.
+**Large:** world is 2560x1440 (using internal_res: 4 keeps bg.png reasonable in size). Lap times 90+ seconds.
 
 Use a **pixel art editor** for the low-res files (mask and data). Recommended: [Aseprite](https://www.aseprite.org/) (paid, best), [Pixelorama](https://orama-interactive.itch.io/pixelorama) (free), [LibreSprite](https://libresprite.github.io/) (free Aseprite fork). For `bg.png` use any editor since it's full resolution.
 
@@ -132,6 +134,8 @@ Use a **pixel art editor** for the low-res files (mask and data). Recommended: [
 #### `bg.png` (what the player sees)
 
 The visible track (surface, kerbs, run-off, background). Draw it at the full-res size from your chosen preset (e.g. 1280x720 for a small track, 2560x1440 for medium).
+
+Since I am not a good artist the tracks are pretty simple, but you can take your time to make the bg.png beautiful with any colors or extra things your heart desires.
 
 Here is what one looks like:
 
@@ -206,3 +210,15 @@ Paint the white line one pixel wide, following the racing line through every cor
 - [ ] `spawn_x` / `spawn_y` land on a black pixel in `track_mask.png`
 
 Drop the folder in and launch. Waypoints are extracted automatically on first load.
+
+---
+
+## Sharing Tracks
+
+If you make a track and want to share it, open a [GitHub Issue](https://github.com/Ekansh38/f1-driver/issues) and attach the folder (zip it first), or open a pull request adding it to `tracks/`.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).

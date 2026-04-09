@@ -265,7 +265,7 @@ class HUD:
             self.verify_text += text
 
     def _run_verify(self):
-        from hmac_util import verify_lap
+        from racing_env.hmac_util import verify_lap
         val = self.verify_text.strip()
         self.verify_open = False
         self.verify_text = ""

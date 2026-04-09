@@ -1,19 +1,18 @@
 import pygame
-from ai import dumb_ai
 import config
 import racing_env.car as car_module
-from utils import get_human_action
-import json
-import math
-import os
-import sys
-import numpy as np
+from racing_env.utils import get_human_action
+from racing_env.hmac_util import sign_lap
 from racing_env.start_line import find_start_line
 from racing_env.lap_timer import LapTimer
 from racing_env.telemetry import LapTelemetry
 from hud import HUD
 from scipy.ndimage import distance_transform_edt
-from hmac_util import sign_lap
+import json
+import math
+import os
+import sys
+import numpy as np
 
 
 def _resource_path(relative):
@@ -21,13 +20,6 @@ def _resource_path(relative):
         return os.path.join(sys._MEIPASS, relative)
     return relative
 
-visual_mode = True
-NUM_AI_CARS = 0
-AI_COLORS = [
-    (100, 160, 255),
-    (255, 120, 120),
-    (120, 255, 120),
-]
 
 pygame.init()
 screen = pygame.display.set_mode((config.WIDTH, config.HEIGHT), pygame.RESIZABLE)
@@ -67,7 +59,6 @@ def is_on_track(pos, margin=0):
 
 
 def _auto_extract_waypoints(folder, data):
-    """Extract waypoints from track_data.png and save them into track.json."""
     surface = pygame.image.load(f"{folder}/track_data.png").convert()
     pw, ph = surface.get_width(), surface.get_height()
     arr = pygame.surfarray.array3d(surface)
@@ -139,7 +130,6 @@ def discover_tracks(root=None):
         if os.path.isdir(path) and os.path.exists(os.path.join(path, "track.json")):
             folders.append(path)
 
-    # Also load user-installed tracks from ~/Library/Application Support/f1-driver/tracks/
     user_tracks_dir = os.path.join(
         os.path.expanduser("~"), "Library", "Application Support", "f1-driver", "tracks"
     )
@@ -179,27 +169,18 @@ lap_params_dirty = False
 prev_timer_state = "waiting"
 
 camera = Camera()
-cars = [car_module.Car(car_spawn.x, car_spawn.y, start_angle)]
-for _i in range(NUM_AI_CARS):
-    cars.append(car_module.Car(car_spawn.x, car_spawn.y, start_angle, team_color=AI_COLORS[_i % len(AI_COLORS)]))
-car = cars[0]
+car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
 
 running = True
 paused = False
 paused_mode = False
 while running:
-    if visual_mode:
-        dt = clock.get_time() / 1000
-    else:
-        dt = 1 / 60
+    dt = clock.get_time() / 1000
+    clock.tick(config.FPS)
 
-    clock.tick(config.FPS if visual_mode else 0)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        if not visual_mode:
-            continue
 
         if event.type == pygame.KEYDOWN:
             was_paused = paused
@@ -214,10 +195,9 @@ while running:
                     camera.follow += 1
 
             if event.key == pygame.K_r:
-                for c in cars:
-                    c.position = pygame.Vector2(car_spawn)
-                    c.velocity = pygame.Vector2(0, 0)
-                    c.angle = start_angle
+                car.position = pygame.Vector2(car_spawn)
+                car.velocity = pygame.Vector2(0, 0)
+                car.angle = start_angle
                 if lap_timer:
                     lap_timer.reset()
                 paused_mode = False
@@ -249,16 +229,14 @@ while running:
             hud.handle_mouseup()
         if event.type == pygame.TEXTINPUT:
             hud.handle_textinput(event.text)
+
     # handle confirmed track switch
     if hud.switcher_confirmed:
         hud.switcher_confirmed = False
         current_track_idx = hud.switcher_idx
         load_track(TRACK_FOLDERS[current_track_idx])
         hud.setup_switcher(TRACK_FOLDERS, current_track_idx)
-        cars = [car_module.Car(car_spawn.x, car_spawn.y, start_angle)]
-        for _i in range(NUM_AI_CARS):
-            cars.append(car_module.Car(car_spawn.x, car_spawn.y, start_angle, team_color=AI_COLORS[_i % len(AI_COLORS)]))
-        car = cars[0]
+        car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
         telemetry._current = []
         telemetry.laps = []
         prev_lap_count = 0
@@ -272,19 +250,14 @@ while running:
 
     game_surface.fill(bg_color)
 
-    if visual_mode:
-        keys = get_human_action(pygame.key.get_pressed())
-    elif not visual_mode:
-        keys = dumb_ai()
+    keys = get_human_action(pygame.key.get_pressed())
 
     blocked_by_line = False
     if not paused:
-        for _ci, c in enumerate(cars):
-            action = keys if _ci == 0 else dumb_ai()
-            c.update(dt, action)
-            if not is_on_track(c.position, c.track_margin):
-                c.position -= c.velocity * dt
-                c.velocity *= -c.bounce
+        car.update(dt, keys)
+        if not is_on_track(car.position, car.track_margin):
+            car.position -= car.velocity * dt
+            car.velocity *= -car.bounce
 
         telemetry_accum += dt
         if lap_timer and lap_timer.state == "timing" and telemetry_accum >= TELEMETRY_INTERVAL:
@@ -292,13 +265,11 @@ while running:
         if telemetry_accum >= TELEMETRY_INTERVAL:
             telemetry_accum -= TELEMETRY_INTERVAL
 
-        # Detect transition from waiting → timing (new lap just started): clear dirty flag
         if lap_timer:
             if prev_timer_state == "waiting" and lap_timer.state == "timing":
                 lap_params_dirty = False
             prev_timer_state = lap_timer.state
 
-        # Mark dirty if params deviate from defaults at any point during a timed lap
         if lap_timer and lap_timer.state == "timing":
             if any(getattr(car, k) != v for k, v in config.CAR_DEFAULTS.items()):
                 lap_params_dirty = True
@@ -346,40 +317,34 @@ while running:
 
     game_surface.blit(scaled_track, rect)
 
-    if visual_mode:
-        cars[0].draw(game_surface, camera, world_w, world_h)
-        for c in cars[1:]:
-            c.draw(game_surface, camera, world_w, world_h, cam_target=cars[0].position)
+    car.draw(game_surface, camera, world_w, world_h)
 
-        if paused_mode:
-            rs = config.RENDER_SCALE
-            panel_w = config.WIDTH * rs
-            panel_h = config.HEIGHT * rs
-            surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-            surf.fill((0, 0, 0, 200))
-            game_surface.blit(surf, (0, 0))
-            msg = hud.font.render("PAUSED", True, (255, 255, 255))
-            game_surface.blit(msg, (panel_w // 2 - msg.get_width() // 2, panel_h - 42 * rs))
+    if paused_mode:
+        rs = config.RENDER_SCALE
+        panel_w = config.WIDTH * rs
+        panel_h = config.HEIGHT * rs
+        surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 200))
+        game_surface.blit(surf, (0, 0))
+        msg = hud.font.render("PAUSED", True, (255, 255, 255))
+        game_surface.blit(msg, (panel_w // 2 - msg.get_width() // 2, panel_h - 42 * rs))
 
-        if lap_timer:
-            if not paused:
-                lap_timer.update(car.position, car.velocity, dt)
-            hud.draw(game_surface, car, lap_timer, telemetry, fps=clock.get_fps(), camera=camera, dt=dt)
-
-        if blocked_by_line:
-            rs = config.RENDER_SCALE
-            panel_w = 500 * rs
-            panel_h = 100 * rs
-            cx = config.WIDTH * rs // 2
-            cy = config.HEIGHT * rs // 2
-            surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
-            surf.fill((0, 0, 0, 220))
-            game_surface.blit(surf, (cx - panel_w // 2, cy - panel_h // 2))
-            msg = hud.font.render("can't go backwards past start line", True, (255, 0, 0))
-            game_surface.blit(msg, (cx - msg.get_width() // 2, cy - msg.get_height() // 2))
-    else:
-        if lap_timer:
+    if lap_timer:
+        if not paused:
             lap_timer.update(car.position, car.velocity, dt)
+        hud.draw(game_surface, car, lap_timer, telemetry, fps=clock.get_fps(), camera=camera, dt=dt)
+
+    if blocked_by_line:
+        rs = config.RENDER_SCALE
+        panel_w = 500 * rs
+        panel_h = 100 * rs
+        cx = config.WIDTH * rs // 2
+        cy = config.HEIGHT * rs // 2
+        surf = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
+        surf.fill((0, 0, 0, 220))
+        game_surface.blit(surf, (cx - panel_w // 2, cy - panel_h // 2))
+        msg = hud.font.render("can't go backwards past start line", True, (255, 0, 0))
+        game_surface.blit(msg, (cx - msg.get_width() // 2, cy - msg.get_height() // 2))
 
     scaled = pygame.transform.smoothscale(game_surface, screen.get_size())
     screen.blit(scaled, (0, 0))

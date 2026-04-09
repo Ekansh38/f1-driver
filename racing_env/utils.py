@@ -8,4 +8,3 @@ def get_human_action(keys):
             if keys[scheme[key]]:
                 action[key] = True
     return action
-
