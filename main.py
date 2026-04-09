@@ -72,8 +72,9 @@ def load_track(folder):
     with open(f"{folder}/track.json") as f:
         data = json.load(f)
 
-    world_w = data["world_w"]
-    world_h = data["world_h"]
+    ir = data.get("internal_res", 1)
+    world_w = data.get("world_w") or int(data["painted_w"] * ir)
+    world_h = data.get("world_h") or int(data["painted_h"] * ir)
 
     _hex = data["background_color"].lstrip("#")
     bg_color = tuple(int(_hex[i:i + 2], 16) for i in (0, 2, 4))
@@ -118,6 +119,17 @@ def discover_tracks(root=None):
         path = os.path.join(root, entry)
         if os.path.isdir(path) and os.path.exists(os.path.join(path, "track.json")):
             folders.append(path)
+
+    # Also load user-installed tracks from ~/Library/Application Support/f1-driver/tracks/
+    user_tracks_dir = os.path.join(
+        os.path.expanduser("~"), "Library", "Application Support", "f1-driver", "tracks"
+    )
+    os.makedirs(user_tracks_dir, exist_ok=True)
+    for entry in sorted(os.listdir(user_tracks_dir)):
+        path = os.path.join(user_tracks_dir, entry)
+        if os.path.isdir(path) and os.path.exists(os.path.join(path, "track.json")):
+            folders.append(path)
+
     return folders
 
 
@@ -144,6 +156,8 @@ telemetry = LapTelemetry()
 prev_lap_count = 0
 telemetry_accum = 0.0
 TELEMETRY_INTERVAL = 1 / 60
+lap_params_dirty = False
+prev_timer_state = "waiting"
 
 camera = Camera()
 cars = [car_module.Car(car_spawn.x, car_spawn.y, start_angle)]
@@ -189,6 +203,8 @@ while running:
                     lap_timer.reset()
                 paused_mode = False
                 telemetry._current = []
+                lap_params_dirty = False
+                prev_timer_state = "waiting"
 
             hud.handle_keydown(event.key, lap_timer=lap_timer)
 
@@ -228,6 +244,8 @@ while running:
         telemetry.laps = []
         prev_lap_count = 0
         telemetry_accum = 0.0
+        lap_params_dirty = False
+        prev_timer_state = "waiting"
         camera.zoom = config.CAMERA_DEFAULTS["zoom"]
         camera.follow = 1 if (world_w > config.WIDTH or world_h > config.HEIGHT) else 0
         paused_mode = False
@@ -254,15 +272,26 @@ while running:
             telemetry.record(car.velocity.length(), keys["up"], keys["brake"] or keys["down"])
         if telemetry_accum >= TELEMETRY_INTERVAL:
             telemetry_accum -= TELEMETRY_INTERVAL
+
+        # Detect transition from waiting → timing (new lap just started): clear dirty flag
+        if lap_timer:
+            if prev_timer_state == "waiting" and lap_timer.state == "timing":
+                lap_params_dirty = False
+            prev_timer_state = lap_timer.state
+
+        # Mark dirty if params deviate from defaults at any point during a timed lap
+        if lap_timer and lap_timer.state == "timing":
+            if any(getattr(car, k) != v for k, v in config.CAR_DEFAULTS.items()):
+                lap_params_dirty = True
+
         if lap_timer and len(lap_timer.laps) > prev_lap_count:
-            is_official = all(
-                getattr(car, k) == v for k, v in config.CAR_DEFAULTS.items()
-            )
+            is_official = not lap_params_dirty
             lap_timer.signed_laps.append(
                 sign_lap(lap_timer.track_name, lap_timer.laps[-1], official=is_official)
             )
             telemetry.finish_lap()
             prev_lap_count = len(lap_timer.laps)
+            lap_params_dirty = False
 
         if lap_timer and lap_timer.state == "timing":
             if car.position.distance_to(lap_timer.center) < lap_timer.proximity * 2:
