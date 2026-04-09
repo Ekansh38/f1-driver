@@ -215,7 +215,7 @@ Drop the folder in and launch. Waypoints are extracted automatically on first lo
 
 ## Sharing Tracks
 
-If you make a track and want to share it, open a [GitHub Issue](https://github.com/Ekansh38/f1-driver/issues) and attach the folder (zip it first), or open a pull request adding it to `tracks/`.
+We are super happy if anybody makes a track, so please feel free to share it! Open a [GitHub Issue](https://github.com/Ekansh38/f1-driver/issues) and attach the folder (zip it first), or open a pull request adding it to `tracks/`.
 
 ---
 
