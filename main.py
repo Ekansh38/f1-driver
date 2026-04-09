@@ -7,6 +7,7 @@ import json
 import math
 import os
 import sys
+import numpy as np
 from racing_env.start_line import find_start_line
 from racing_env.lap_timer import LapTimer
 from racing_env.telemetry import LapTelemetry
@@ -65,12 +66,30 @@ def is_on_track(pos, margin=0):
     return signed_dist[x, y] > margin
 
 
+def _auto_extract_waypoints(folder, data):
+    """Extract waypoints from track_data.png and save them into track.json."""
+    surface = pygame.image.load(f"{folder}/track_data.png").convert()
+    pw, ph = surface.get_width(), surface.get_height()
+    arr = pygame.surfarray.array3d(surface)
+    white = (arr[:, :, 0] == 255) & (arr[:, :, 1] == 255) & (arr[:, :, 2] == 255)
+    coords = np.argwhere(white)
+    data["waypoints"] = coords.tolist()
+    data["painted_w"] = pw
+    data["painted_h"] = ph
+    with open(f"{folder}/track.json", "w") as f:
+        json.dump(data, f, indent=2)
+    return data
+
+
 def load_track(folder):
     global world_w, world_h, bg_color, scale_x, scale_y
     global waypoints, signed_dist, track_img, lap_timer, car_spawn, start_angle
 
     with open(f"{folder}/track.json") as f:
         data = json.load(f)
+
+    if not data.get("waypoints"):
+        data = _auto_extract_waypoints(folder, data)
 
     ir = data.get("internal_res", 1)
     world_w = data.get("world_w") or int(data["painted_w"] * ir)
