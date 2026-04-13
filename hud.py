@@ -231,6 +231,8 @@ class HUD:
             self._draw_sign_panel(screen, lap_timer)
         if self.verify_open:
             self._draw_verify_input(screen)
+        if self._toast_timer > 0 and self._toast_msg:
+            self._draw_toast(screen)
         if self.level == 0:
             return
         self._draw_racing_panel(screen, car, lap_timer)
@@ -238,8 +240,6 @@ class HUD:
             self._draw_car_panel(screen, car)
         if self.level == 3:
             self._draw_lap_history(screen, lap_timer)
-        if self._toast_timer > 0 and self._toast_msg:
-            self._draw_toast(screen)
 
     def _toast(self, msg, color=(255, 255, 255), duration=1.5):
         self._toast_msg = msg

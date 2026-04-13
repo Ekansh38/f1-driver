@@ -156,7 +156,7 @@ class Camera:
 
 # --- initial load ---
 TRACK_FOLDERS = discover_tracks()
-current_track_idx = 1  # default to track2
+current_track_idx = 0  # default to track1 (Green Roads)
 load_track(TRACK_FOLDERS[current_track_idx])
 
 hud = HUD()
