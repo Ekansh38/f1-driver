@@ -1,12 +1,12 @@
 class F1Driver < Formula
   desc "Top-down F1 racing simulator with signed lap times"
   homepage "https://github.com/Ekansh38/f1-driver"
-  version "1.0.0"
+  version "1.0.1"
 
   on_macos do
     on_arm do
-      url "https://github.com/Ekansh38/f1-driver/releases/download/v1.0.0/f1-driver-macos-arm64.tar.gz"
-      sha256 "fe3a60e04bed046a8e2820dacbf90fd57789d72b0e15792df9a0e318fdb925bb"
+      url "https://github.com/Ekansh38/f1-driver/releases/download/v1.0.1/f1-driver-macos-arm64.tar.gz"
+      sha256 "900e07788394f8fcb757690777d63a026c538f2f6890cfecc3a901ce53ca95e6"
     end
   end
 
