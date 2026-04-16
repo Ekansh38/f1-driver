@@ -50,7 +50,6 @@ class LapTimer:
         self.cooldown = 0.0
         self.paused = False
         self.paused_time = 0.0
-        self.signed_laps = []
 
     def pause(self):
         self.paused_time = self.current_time()

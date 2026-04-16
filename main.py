@@ -168,6 +168,8 @@ TELEMETRY_INTERVAL = 1 / 60
 lap_params_dirty = False
 prev_timer_state = "waiting"
 
+track_states = {}  # { folder_path: { laps, signed_laps, telemetry_laps } }
+
 camera = Camera()
 car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
 
@@ -233,13 +235,20 @@ while running:
     # handle confirmed track switch
     if hud.switcher_confirmed:
         hud.switcher_confirmed = False
+
+        # Save current track's lap history before switching
+        if lap_timer:
+            track_states[TRACK_FOLDERS[current_track_idx]] = {
+                "laps": list(lap_timer.laps),
+                "signed_laps": list(lap_timer.signed_laps),
+                "telemetry_laps": list(telemetry.laps),
+            }
+
         current_track_idx = hud.switcher_idx
         load_track(TRACK_FOLDERS[current_track_idx])
         hud.setup_switcher(TRACK_FOLDERS, current_track_idx)
         car = car_module.Car(car_spawn.x, car_spawn.y, start_angle)
         telemetry._current = []
-        telemetry.laps = []
-        prev_lap_count = 0
         telemetry_accum = 0.0
         lap_params_dirty = False
         prev_timer_state = "waiting"
@@ -247,6 +256,17 @@ while running:
         camera.follow = 1 if (world_w > config.WIDTH or world_h > config.HEIGHT) else 0
         paused_mode = False
         paused = False
+
+        # Restore saved state for this track if it exists
+        saved = track_states.get(TRACK_FOLDERS[current_track_idx])
+        if saved and lap_timer:
+            lap_timer.laps = saved["laps"]
+            lap_timer.signed_laps = saved["signed_laps"]
+            telemetry.laps = saved["telemetry_laps"]
+            prev_lap_count = len(lap_timer.laps)
+        else:
+            telemetry.laps = []
+            prev_lap_count = 0
 
     game_surface.fill(bg_color)
 
